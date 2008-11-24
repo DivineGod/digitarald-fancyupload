@@ -4,6 +4,8 @@
 	import flash.display.StageAlign;
 	import flash.display.StageScaleMode;
 	import flash.display.MovieClip;
+	import flash.display.Loader;
+	import flash.display.SimpleButton;
 	import flash.events.*;
 	import flash.utils.*;
 	import com.adobe.serialization.json.*;
@@ -29,7 +31,22 @@
 	 */
 	public class Uploader extends Sprite 
 	{
+		[Embed(source = 'button.png')]
+		private var embeddedInteractiveElement:Class;
+
+		private var allowed:Boolean = true;
+		private var timer:Number = 0;
 		
+		private var multiple:Boolean = true;
+		private var queued:Boolean = true;
+		private var options:Object = new Object();
+		private var fileList:Array = new Array();
+		private var fileProgress:Array = new Array();
+		private var progress:Object = new Object();
+		
+		private var fileReference:Object = null;
+		private var uploading:Boolean = false;
+
 		public function Uploader():void 
 		{
 			if (stage) init();
@@ -54,7 +71,7 @@
 			stage.align = StageAlign.TOP_LEFT;
 			stage.scaleMode = StageScaleMode.NO_SCALE;
 			stage.addEventListener(MouseEvent.CLICK, stageClicked);
-			
+			/*
 			var bg:MovieClip = new MovieClip();
 			bg.graphics.beginFill(0xFF0000, 0);
 			bg.graphics.drawRect(0, 0, 1024, 1024);
@@ -65,10 +82,45 @@
 			bg.graphics.endFill();
 			bg.buttonMode = true;
 			bg.useHandCursor = true;
-			addChild(bg);
+			addChild(bg);*/
+			var cie:* = this.createInteractionElement();
+			var scale:Boolean = root.loaderInfo.parameters.scale || false;
+			if (scale) {
+				cie.width = stage.stageWidth;
+				cie.height = stage.stageHeight;
+			}
+			cie.x = (stage.stageWidth / 2) - (cie.width / 2);
+			cie.y = (stage.stageHeight / 2) - (cie.height / 2);
+			stage.addChild(cie);
 
 			ExternalInterface.call(root.loaderInfo.parameters.onLoad);
 			
+		}
+		private function createInteractionElement():* {
+			if(root.loaderInfo.parameters.buttonImageDefault != null) {
+				var element:SimpleButton = new SimpleButton();
+				var upStateUrl:String = root.loaderInfo.parameters.buttonImageDefault;
+				var downStateUrl:String = root.loaderInfo.parameters.buttonImageClicked || null;
+				var overStateUrl:String = root.loaderInfo.parameters.buttonImageHover || null;
+				element.useHandCursor = true;
+
+				var upStateLoader:Loader = new Loader();
+				upStateLoader.load(new URLRequest(upStateUrl));
+				upStateLoader.addEventListener(Event.COMPLETE, function(e:Event):void { element.upState = e.currentTarget.content; });
+				if(overStateUrl !== null) {
+					var overStateLoader:Loader = new Loader();
+					overStateLoader.load(new URLRequest(overStateUrl));
+					overStateLoader.addEventListener(Event.COMPLETE, function(e:Event):void { element.overState = e.currentTarget.content; });
+				}
+				if(downStateUrl !== null) {
+					var downStateLoader:Loader = new Loader();
+					downStateLoader.load(new URLRequest(downStateUrl));
+					downStateLoader.addEventListener(Event.COMPLETE, function(e:Event):void { element.downState = e.currentTarget.content; });
+				}
+				return element;
+			} else {
+				return new embeddedInteractiveElement(); 
+			}
 		}
 		private function stageClicked(e:MouseEvent):void {
 			browse();
@@ -80,19 +132,6 @@
 		 * 
 		 */
 		
-		private var allowed:Boolean = true;
-		private var timer:Number = 0;
-		
-		private var multiple:Boolean = true;
-		private var queued:Boolean = true;
-		private var options:Object = new Object();
-		private var fileList:Array = new Array();
-		private var fileProgress:Array = new Array();
-		private var progress:Object = new Object();
-		
-		private var fileReference:Object = null;
-		private var uploading:Boolean = false;
-
 		private function allow():void{
 			allowed = true;
 			timer = 0;
